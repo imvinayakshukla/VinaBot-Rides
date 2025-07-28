@@ -26,7 +26,10 @@ pipeline {
         
         stage('Install Dependencies') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Installing Node.js dependencies...'
@@ -49,7 +52,10 @@ pipeline {
         
         stage('Run Tests') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Running frontend tests...'
@@ -71,7 +77,10 @@ pipeline {
         
         stage('Build Application') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Building Angular application...'
@@ -92,7 +101,10 @@ pipeline {
         
         stage('Build Docker Image') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Building Docker image...'
@@ -110,7 +122,10 @@ pipeline {
         
         stage('Load Image to Kind Cluster') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Loading Docker image into existing Kind cluster...'
@@ -137,7 +152,10 @@ pipeline {
         
         stage('Update Helm Values') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Updating Helm chart values...'
@@ -155,7 +173,10 @@ pipeline {
         
         stage('Deploy to Kubernetes') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Deploying to Kind cluster using Helm...'
@@ -187,7 +208,10 @@ pipeline {
         
         stage('Health Check') {
             when {
-                branch 'dev'
+                anyOf {
+                    branch 'dev'
+                    branch 'origin/dev'
+                }
             }
             steps {
                 echo 'Performing health check...'
@@ -218,10 +242,14 @@ pipeline {
         always {
             echo 'Cleaning up...'
             script {
-                // Clean up local Docker images to save space
+                // Clean up local Docker images to save space (only if Docker is available)
                 sh """
-                    docker rmi ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true
-                    docker system prune -f || true
+                    if command -v docker &> /dev/null; then
+                        docker rmi ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true
+                        docker system prune -f || true
+                    else
+                        echo "Docker not available, skipping cleanup"
+                    fi
                 """
             }
         }
