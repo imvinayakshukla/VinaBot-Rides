@@ -25,12 +25,6 @@ pipeline {
         }
         
         stage('Install Dependencies') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Installing Node.js dependencies...'
                 dir("${FRONTEND_APP_PATH}") {
@@ -51,12 +45,6 @@ pipeline {
         }
         
         stage('Run Tests') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Running frontend tests...'
                 dir("${FRONTEND_APP_PATH}") {
@@ -76,12 +64,6 @@ pipeline {
         }
         
         stage('Build Application') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Building Angular application...'
                 dir("${FRONTEND_APP_PATH}") {
@@ -100,12 +82,6 @@ pipeline {
         }
         
         stage('Build Docker Image') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Building Docker image...'
                 dir("${FRONTEND_APP_PATH}") {
@@ -121,12 +97,6 @@ pipeline {
         }
         
         stage('Load Image to Kind Cluster') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Loading Docker image into existing Kind cluster...'
                 script {
@@ -151,12 +121,6 @@ pipeline {
         }
         
         stage('Update Helm Values') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Updating Helm chart values...'
                 script {
@@ -172,12 +136,6 @@ pipeline {
         }
         
         stage('Deploy to Kubernetes') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Deploying to Kind cluster using Helm...'
                 script {
@@ -207,12 +165,6 @@ pipeline {
         }
         
         stage('Health Check') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'origin/dev'
-                }
-            }
             steps {
                 echo 'Performing health check...'
                 script {
