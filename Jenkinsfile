@@ -1,8 +1,8 @@
 pipeline {
     agent {
         docker {
-            image 'docker:latest'
-            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock -v /usr/local/bin/docker:/usr/local/bin/docker'
+            image 'docker:dind'
+            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
     
@@ -32,6 +32,10 @@ pipeline {
             steps {
                 echo 'Setting up build environment...'
                 sh '''
+                    # Start Docker daemon in background
+                    dockerd-entrypoint.sh &
+                    sleep 10
+                    
                     # Install necessary tools in Docker container
                     apk update
                     apk add --no-cache curl bash git nodejs npm
@@ -167,12 +171,18 @@ pipeline {
     
     post {
         always {
-            echo 'Cleaning up...'
-            sh '''
-                # Clean up Docker images to save space
-                docker rmi ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true
-                docker system prune -f || true
-            '''
+            script {
+                try {
+                    echo 'Cleaning up...'
+                    sh '''
+                        # Clean up Docker images to save space
+                        docker rmi ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true
+                        docker system prune -f || true
+                    '''
+                } catch (Exception e) {
+                    echo "Cleanup failed: ${e.getMessage()}"
+                }
+            }
         }
         
         success {
