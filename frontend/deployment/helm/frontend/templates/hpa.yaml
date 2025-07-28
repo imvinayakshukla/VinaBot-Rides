@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "vinbot-rides-frontend.fullname" . }}
+  name: {{ include "vinabot-rides-frontend.fullname" . }}
   labels:
-    {{- include "vinbot-rides-frontend.labels" . | nindent 4 }}
+    {{- include "vinabot-rides-frontend.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "vinbot-rides-frontend.fullname" . }}
+    name: {{ include "vinabot-rides-frontend.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
