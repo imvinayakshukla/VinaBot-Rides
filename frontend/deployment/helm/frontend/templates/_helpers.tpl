@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "vinbot-rides-frontend.name" -}}
+{{- define "vinabot-rides-frontend.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "vinbot-rides-frontend.fullname" -}}
+{{- define "vinabot-rides-frontend.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,38 +26,26 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "vinbot-rides-frontend.chart" -}}
+{{- define "vinabot-rides-frontend.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "vinbot-rides-frontend.labels" -}}
-helm.sh/chart: {{ include "vinbot-rides-frontend.chart" . }}
-{{ include "vinbot-rides-frontend.selectorLabels" . }}
+{{- define "vinabot-rides-frontend.labels" -}}
+helm.sh/chart: {{ include "vinabot-rides-frontend.chart" . }}
+{{ include "vinabot-rides-frontend.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/environment: {{ .Values.environment }}
 {{- end }}
 
 {{/*
 Selector labels
 */}}
-{{- define "vinbot-rides-frontend.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "vinbot-rides-frontend.name" . }}
+{{- define "vinabot-rides-frontend.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "vinabot-rides-frontend.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
-
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "vinbot-rides-frontend.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "vinbot-rides-frontend.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
 {{- end }}
