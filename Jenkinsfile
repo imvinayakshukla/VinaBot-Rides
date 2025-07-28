@@ -32,27 +32,33 @@ pipeline {
             steps {
                 echo 'Setting up build environment...'
                 sh '''
-                    # Start Docker daemon in background
-                    dockerd-entrypoint.sh &
-                    sleep 10
-                    
-                    # Install necessary tools in Docker container
+                    # Install Docker in the container
                     apk update
+                    apk add --no-cache docker
+
+                    # Start Docker daemon in the background
+                    dockerd &
+                    sleep 10
+
+                    # Verify Docker is running
+                    docker info
+
+                    # Install necessary tools
                     apk add --no-cache curl bash git nodejs npm
-                    
+
                     # Install Kind
                     curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
                     chmod +x ./kind
                     mv ./kind /usr/local/bin/kind
-                    
+
                     # Install kubectl
                     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
                     chmod +x kubectl
                     mv ./kubectl /usr/local/bin/kubectl
-                    
+
                     # Install Helm
                     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-                    
+
                     # Verify installations
                     docker --version
                     node --version
