@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -21,20 +21,22 @@ FROM nginx:alpine
 # Install security updates
 RUN apk update && apk upgrade && apk add --no-cache dumb-init
 
-# Create nginx user
-RUN addgroup -g 1000 -S nginx && \
-    adduser -S -D -H -u 1000 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+# Remove existing nginx user and group, then create new ones with specific IDs
+RUN deluser nginx 2>/dev/null || true && \
+    delgroup nginx 2>/dev/null || true && \
+    addgroup -g 1000 -S nginx && \
+    adduser -S -D -H -u 1000 -h /var/cache/nginx -s /sbin/nologin -G nginx nginx
 
 # Copy built application
-COPY --from=builder /app/dist/vinabot-rides-app /usr/share/nginx/html
+COPY --from=builder /app/dist/vinabot-rides-app/browser /usr/share/nginx/html
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Create necessary directories and set permissions
-RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
-    chown -R nginx:nginx /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html && \
-    chmod -R 755 /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html
+RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx /tmp && \
+    chown -R nginx:nginx /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html /tmp && \
+    chmod -R 755 /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html /tmp
 
 # Switch to non-root user
 USER nginx

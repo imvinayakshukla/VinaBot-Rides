@@ -1,74 +1,53 @@
-# Default values for vinbot-rides-frontend.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
+# Default values for vinabot-rides-frontend
 replicaCount: 2
 
 image:
-  repository: vinbot-rides-frontend
+  repository: vinabot-rides-frontend
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Automatically mount a ServiceAccount's API credentials?
-  automount: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
-
-podAnnotations: {}
-podLabels: {}
-
-podSecurityContext:
-  fsGroup: 2000
-
-securityContext:
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop:
-    - ALL
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  runAsUser: 1000
-
 service:
-  type: ClusterIP
-  port: 80
+  type: NodePort
+  port: 8082
   targetPort: 8082
+  nodePort: 30083
 
 ingress:
-  enabled: true
-  className: "nginx"
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-  hosts:
-    - host: dev.vinbotride.vinayakshukla.me
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: vinbot-rides-frontend-tls
-      hosts:
-        - dev.vinbotride.vinayakshukla.me
+  enabled: false
 
 resources:
   limits:
     cpu: 500m
     memory: 512Mi
   requests:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 250m
+    memory: 256Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
 
 livenessProbe:
   httpGet:
@@ -83,43 +62,3 @@ readinessProbe:
     port: http
   initialDelaySeconds: 5
   periodSeconds: 5
-
-autoscaling:
-  enabled: false
-  minReplicas: 2
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
-
-# Additional volumes on the output Deployment definition.
-volumes:
-  - name: tmp
-    emptyDir: {}
-  - name: var-cache-nginx
-    emptyDir: {}
-  - name: var-run
-    emptyDir: {}
-
-# Additional volumeMounts on the output Deployment definition.
-volumeMounts:
-  - name: tmp
-    mountPath: /tmp
-  - name: var-cache-nginx
-    mountPath: /var/cache/nginx
-  - name: var-run
-    mountPath: /var/run
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
-
-# Environment-specific configuration
-environment: dev
-
-# Application configuration
-app:
-  name: vinbot-rides-frontend
-  version: "1.0.0"
-  environment: dev

@@ -1,15 +1,18 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "vinbot-rides-frontend.fullname" . }}
+  name: {{ include "vinabot-rides-frontend.fullname" . }}
   labels:
-    {{- include "vinbot-rides-frontend.labels" . | nindent 4 }}
+    {{- include "vinabot-rides-frontend.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: http
+      targetPort: {{ .Values.service.targetPort }}
+      {{- if .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
       protocol: TCP
       name: http
   selector:
-    {{- include "vinbot-rides-frontend.selectorLabels" . | nindent 4 }}
+    {{- include "vinabot-rides-frontend.selectorLabels" . | nindent 4 }}
