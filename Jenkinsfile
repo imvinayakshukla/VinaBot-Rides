@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'docker:latest'
+            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock -v /usr/local/bin/docker:/usr/local/bin/docker'
+        }
+    }
     
     environment {
         // Local development with Kind - no external registry needed
@@ -23,162 +28,164 @@ pipeline {
             }
         }
         
-        stage('Validate Environment') {
+        stage('Setup Build Environment') {
             steps {
-                echo 'Checking build environment...'
-                script {
+                echo 'Setting up build environment...'
+                sh '''
+                    # Install necessary tools in Docker container
+                    apk update
+                    apk add --no-cache curl bash git nodejs npm
+                    
+                    # Install Kind
+                    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+                    chmod +x ./kind
+                    mv ./kind /usr/local/bin/kind
+                    
+                    # Install kubectl
+                    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                    chmod +x kubectl
+                    mv ./kubectl /usr/local/bin/kubectl
+                    
+                    # Install Helm
+                    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+                    
+                    # Verify installations
+                    docker --version
+                    node --version
+                    npm --version
+                    kind version
+                    kubectl version --client
+                    helm version
+                '''
+            }
+        }
+        
+        stage('Install Dependencies & Build App') {
+            steps {
+                echo 'Installing Node.js dependencies and building Angular app...'
+                dir("${FRONTEND_APP_PATH}") {
                     sh '''
-                        echo "================================================"
-                        echo "🔍 ENVIRONMENT CHECK"
-                        echo "================================================"
-                        echo "Git version: $(git --version || echo 'Not available')"
-                        echo "Node.js: $(node --version 2>/dev/null || echo 'Not available')"
-                        echo "npm: $(npm --version 2>/dev/null || echo 'Not available')"
-                        echo "Docker: $(docker --version 2>/dev/null || echo 'Not available')"
-                        echo "kubectl: $(kubectl version --client --short 2>/dev/null || echo 'Not available')"
-                        echo "kind: $(kind version 2>/dev/null || echo 'Not available')"
-                        echo "helm: $(helm version --short 2>/dev/null || echo 'Not available')"
-                        echo "================================================"
+                        # Install dependencies
+                        npm ci
+                        
+                        # Build the application
+                        npm run build
+                        
+                        # Verify build output
+                        ls -la dist/
                     '''
                 }
             }
         }
         
-        stage('Build Instructions') {
+        stage('Build Docker Image') {
             steps {
-                echo 'Providing deployment instructions...'
-                script {
+                echo 'Building Docker image...'
+                dir("${FRONTEND_APP_PATH}") {
                     sh '''
-                        echo ""
-                        echo "================================================"
-                        echo "📋 VINABOT RIDES - FRONTEND DEPLOYMENT GUIDE"
-                        echo "================================================"
-                        echo ""
-                        echo "✅ Source code successfully checked out!"
-                        echo "📂 Project structure:"
-                        ls -la
-                        echo ""
-                        echo "📁 Frontend app location:"
-                        ls -la frontend/vinabot-rides-app/
-                        echo ""
-                        echo "🚀 DEPLOYMENT STEPS:"
-                        echo ""
-                        echo "1️⃣  Install Dependencies:"
-                        echo "   cd ${WORKSPACE}/frontend/vinabot-rides-app"
-                        echo "   npm ci"
-                        echo ""
-                        echo "2️⃣  Build Angular Application:"
-                        echo "   npm run build"
-                        echo ""
-                        echo "3️⃣  Build Docker Image:"
-                        echo "   docker build -t vinabot-rides-frontend:latest ."
-                        echo ""
-                        echo "4️⃣  Load Image to Kind Cluster:"
-                        echo "   kind load docker-image vinabot-rides-frontend:latest --name vinabot-rides"
-                        echo ""
-                        echo "5️⃣  Deploy with Helm:"
-                        echo "   cd ${WORKSPACE}/frontend/deployment/helm"
-                        echo "   helm install vinabot-rides-frontend frontend/"
-                        echo ""
-                        echo "6️⃣  Access Application:"
-                        echo "   🌐 http://localhost:8082"
-                        echo ""
-                        echo "================================================"
-                        echo "📋 QUICK COPY-PASTE COMMANDS:"
-                        echo "================================================"
-                        echo ""
-                        echo "# Navigate to frontend directory"
-                        echo "cd ${WORKSPACE}/frontend/vinabot-rides-app"
-                        echo ""
-                        echo "# Install dependencies and build"
-                        echo "npm ci && npm run build"
-                        echo ""
-                        echo "# Build and deploy Docker image"
-                        echo "docker build -t vinabot-rides-frontend:latest ."
-                        echo "kind load docker-image vinabot-rides-frontend:latest --name vinabot-rides"
-                        echo ""
-                        echo "# Deploy with Helm"
-                        echo "cd ../deployment/helm"
-                        echo "helm install vinabot-rides-frontend frontend/"
-                        echo ""
-                        echo "# Check deployment status"
-                        echo "kubectl get pods,svc"
-                        echo ""
-                        echo "================================================"
-                        echo "✅ JENKINS PIPELINE COMPLETED SUCCESSFULLY!"
-                        echo "📝 Follow the manual steps above to complete deployment"
-                        echo "================================================"
+                        # Build Docker image exactly as specified
+                        docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} .
+                        
+                        # Verify image was created
+                        docker images | grep ${DOCKER_IMAGE_NAME}
                     '''
                 }
             }
         }
         
-        stage('Verify Project Files') {
+        stage('Load Image to Kind Cluster') {
             steps {
-                echo 'Verifying project structure...'
-                script {
+                echo 'Loading Docker image into Kind cluster...'
+                sh '''
+                    # Check if Kind cluster exists
+                    if ! kind get clusters | grep -q '${KIND_CLUSTER_NAME}'; then
+                        echo "ERROR: Kind cluster '${KIND_CLUSTER_NAME}' not found!"
+                        echo "Creating Kind cluster with config..."
+                        kind create cluster --config frontend/deployment/kind-config.yaml --name ${KIND_CLUSTER_NAME}
+                    fi
+                    
+                    echo "Found Kind cluster: ${KIND_CLUSTER_NAME}"
+                    
+                    # Load the Docker image into Kind cluster
+                    kind load docker-image ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} --name ${KIND_CLUSTER_NAME}
+                    
+                    echo "Docker image loaded into Kind cluster successfully"
+                '''
+            }
+        }
+        
+        stage('Deploy with Helm') {
+            steps {
+                echo 'Deploying to Kubernetes using Helm...'
+                dir("${HELM_CHART_PATH}") {
                     sh '''
-                        echo ""
-                        echo "🔍 VERIFYING PROJECT FILES:"
-                        echo ""
-                        echo "📋 Frontend app files:"
-                        if [ -f "frontend/vinabot-rides-app/package.json" ]; then
-                            echo "✅ package.json found"
-                            echo "📦 Dependencies:"
-                            grep -A 5 -B 5 '"dependencies"' frontend/vinabot-rides-app/package.json || echo "Could not read dependencies"
-                        else
-                            echo "❌ package.json not found"
-                        fi
-                        echo ""
+                        # Set kubectl context to Kind cluster
+                        kubectl config use-context kind-${KIND_CLUSTER_NAME}
                         
-                        echo "🐳 Docker files:"
-                        if [ -f "frontend/vinabot-rides-app/Dockerfile" ]; then
-                            echo "✅ Dockerfile found"
-                        else
-                            echo "❌ Dockerfile not found"
-                        fi
-                        echo ""
+                        # Verify cluster connection
+                        kubectl cluster-info
                         
-                        echo "⚓ Helm chart files:"
-                        if [ -d "frontend/deployment/helm/frontend" ]; then
-                            echo "✅ Helm chart directory found"
-                            ls -la frontend/deployment/helm/frontend/
-                        else
-                            echo "❌ Helm chart directory not found"
-                        fi
-                        echo ""
+                        # Update image tag in values.yaml
+                        sed -i 's/tag: .*/tag: "${DOCKER_IMAGE_TAG}"/' frontend/values.yaml
                         
-                        echo "🎯 Kind configuration:"
-                        if [ -f "frontend/deployment/kind-config.yaml" ]; then
-                            echo "✅ Kind config found"
-                            cat frontend/deployment/kind-config.yaml
-                        else
-                            echo "❌ Kind config not found"
-                        fi
+                        # Deploy with Helm (uninstall first if exists)
+                        helm uninstall vinabot-rides-frontend 2>/dev/null || echo "Release not found, proceeding with fresh install"
+                        
+                        # Install with Helm
+                        helm install vinabot-rides-frontend frontend/
+                        
+                        # Wait for deployment to be ready
+                        kubectl wait --for=condition=available --timeout=300s deployment/vinabot-rides-frontend
                     '''
                 }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                echo 'Verifying deployment...'
+                sh '''
+                    # Get deployment status
+                    kubectl get pods,svc
+                    
+                    # Check if pods are running
+                    kubectl get pods -l app.kubernetes.io/name=vinabot-rides-frontend
+                    
+                    # Get service information
+                    kubectl describe svc vinabot-rides-frontend
+                    
+                    echo "=================================="
+                    echo "✅ DEPLOYMENT SUCCESSFUL!"
+                    echo "=================================="
+                    echo "🌐 Application is accessible at: http://localhost:8082"
+                    echo "🔍 Check status with: kubectl get pods,svc"
+                    echo "=================================="
+                '''
             }
         }
     }
     
     post {
+        always {
+            echo 'Cleaning up...'
+            sh '''
+                # Clean up Docker images to save space
+                docker rmi ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true
+                docker system prune -f || true
+            '''
+        }
+        
         success {
             echo 'Pipeline completed successfully!'
             script {
                 echo """
-                ================================================
-                ✅ JENKINS PIPELINE SUCCESS - BUILD ${BUILD_NUMBER}
-                ================================================
+                ✅ DEPLOYMENT SUCCESSFUL - Build ${BUILD_NUMBER}
                 
-                📦 Source code: Successfully checked out
-                📝 Instructions: Provided above
-                🚀 Ready for: Manual deployment
+                🐳 Docker image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                ⚓ Helm release: vinabot-rides-frontend
+                🌐 Application URL: http://localhost:8082
                 
-                💡 TIP: Copy the commands from the 'Build Instructions' 
-                stage and run them in your terminal to deploy the application.
-                
-                🌐 Expected URL: http://localhost:8082
-                ================================================
+                Deployment completed automatically!
                 """
             }
         }
@@ -187,13 +194,14 @@ pipeline {
             echo 'Pipeline failed!'
             script {
                 echo """
-                ❌ JENKINS PIPELINE FAILED - BUILD ${BUILD_NUMBER}
+                ❌ DEPLOYMENT FAILED - Build ${BUILD_NUMBER}
                 
-                Please check the logs above for error details.
-                The most common issues are:
-                - Missing tools in Jenkins environment
-                - Permission issues
-                - Network connectivity problems
+                Check the logs above for error details.
+                Common issues:
+                - Docker service not running
+                - Kind cluster not accessible
+                - Port conflicts
+                - Helm chart issues
                 """
             }
         }
