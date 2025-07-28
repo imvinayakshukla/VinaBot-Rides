@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'jenkins/agent:latest'
-            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
     
     environment {
         // Local development with Kind - no external registry needed
@@ -33,8 +28,12 @@ pipeline {
                 echo 'Setting up build environment...'
                 sh '''
                     # Install necessary tools
-                    apk update
-                    apk add --no-cache curl bash git nodejs npm
+                    apt-get update
+                    apt-get install -y curl bash git nodejs npm docker.io
+
+                    # Start Docker service
+                    systemctl start docker
+                    systemctl enable docker
 
                     # Install Kind
                     curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
