@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'docker:dind'
+            image 'jenkins/agent:latest'
             args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
@@ -32,18 +32,8 @@ pipeline {
             steps {
                 echo 'Setting up build environment...'
                 sh '''
-                    # Install Docker in the container
-                    apk update
-                    apk add --no-cache docker
-
-                    # Start Docker daemon in the background
-                    dockerd &
-                    sleep 10
-
-                    # Verify Docker is running
-                    docker info
-
                     # Install necessary tools
+                    apk update
                     apk add --no-cache curl bash git nodejs npm
 
                     # Install Kind
