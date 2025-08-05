@@ -2,9 +2,9 @@ pipeline {
     agent any
     
     environment {
-        // Local development with Kind - no external registry needed
+        // Local development with Kind - use build number for unique tags
         DOCKER_IMAGE_NAME = 'vinabot-rides-frontend'
-        DOCKER_IMAGE_TAG = 'latest'
+        DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
         HELM_CHART_PATH = 'frontend/deployment/helm'
         FRONTEND_APP_PATH = 'frontend/vinabot-rides-app'
         KIND_CLUSTER_NAME = 'vinabot-rides'
@@ -517,9 +517,13 @@ EOF
                             helm install vinabot-rides-frontend frontend/ -n vinbot-ride-dev --wait --timeout=300s
                         fi
                         
+                        # Force restart deployment to pull new image (since we use 'latest' tag)
+                        echo "=== Forcing deployment restart to pull new image ==="
+                        kubectl rollout restart deployment/vinabot-rides-frontend -n vinbot-ride-dev
+                        
                         # Wait for deployment to be ready
                         echo "=== Waiting for deployment to be ready ==="
-                        kubectl wait --for=condition=available --timeout=300s deployment/vinabot-rides-frontend -n vinbot-ride-dev || {
+                        kubectl rollout status deployment/vinabot-rides-frontend -n vinbot-ride-dev --timeout=300s || {
                             echo "Deployment not ready, checking status..."
                             kubectl get pods -n vinbot-ride-dev
                             kubectl get deployment vinabot-rides-frontend -n vinbot-ride-dev
