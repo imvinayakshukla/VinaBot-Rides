@@ -1,0 +1,99 @@
+/* Custom animations and styles for the navbar */
+.navbar-slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Smooth transitions for mobile menu */
+.mobile-menu-enter {
+  animation: mobileMenuSlide 0.2s ease-out;
+}
+
+@keyframes mobileMenuSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom hover effects */
+.nav-link {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::before {
+  width: 100%;
+}
+
+/* Glassmorphism effect for enhanced visual appeal */
+.glass-nav {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* Active route styling */
+.router-link-active {
+  color: #3b82f6 !important;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Notification badge pulse animation */
+.notification-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Custom scrollbar for mobile menu if needed */
+.mobile-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mobile-menu::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.mobile-menu::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.mobile-menu::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
