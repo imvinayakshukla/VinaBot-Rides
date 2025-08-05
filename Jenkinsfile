@@ -561,7 +561,7 @@ EOF
                     echo "=================================="
                     echo "✅ DEPLOYMENT SUCCESSFUL!"
                     echo "=================================="
-                    echo "🌐 Application is accessible at: http://localhost:8082"
+                    echo "🌐 Application is accessible at: https://dev-vinbotride.vinayakshukla.me/"
                     echo "🔍 Check status with: kubectl get pods,svc"
                     echo "⚓ Helm release: vinabot-rides-frontend"
                     echo "=================================="
@@ -607,7 +607,7 @@ EOF
                 🐳 Docker image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                 📦 Docker image saved and loaded into Kind cluster
                 ⚓ Helm release: vinabot-rides-frontend deployed
-                🌐 Application URL: http://localhost:8082
+                🌐 Application URL: https://dev-vinbotride.vinayakshukla.me/
                 � Artifacts archived in Jenkins
                 
                 🚀 Full automated deployment completed!
