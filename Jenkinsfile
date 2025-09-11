@@ -8,17 +8,29 @@ pipeline {
         HELM_CHART_PATH = 'frontend/deployment/helm'
         FRONTEND_APP_PATH = 'frontend/vinabot-rides-app'
         KIND_CLUSTER_NAME = 'vinabot-rides'
+        GITHUB_CREDENTIALS_ID = 'jenkins-vinbotride-token' // Add your GitHub token credential ID
     }
     
     triggers {
-        // Trigger build when changes are pushed to dev branch
+        // Trigger build on PR and dev branch pushes
         githubPush()
+        pullRequest(targetBranch: 'dev')
     }
     
     stages {
         stage('Checkout') {
             steps {
                 echo 'Checking out source code...'
+                script {
+                    if (env.CHANGE_ID) {
+                        echo "🔄 Building Pull Request #${env.CHANGE_ID}"
+                        echo "📝 PR Title: ${env.CHANGE_TITLE}"
+                        echo "🌿 Source Branch: ${env.CHANGE_BRANCH}"
+                        echo "🎯 Target Branch: ${env.CHANGE_TARGET}"
+                    } else {
+                        echo "🌿 Building branch: ${env.BRANCH_NAME}"
+                    }
+                }
                 checkout scm
             }
         }
@@ -198,6 +210,11 @@ pipeline {
         }
         
         stage('Create Deployment Package') {
+            when {
+                not { 
+                    changeRequest() 
+                }
+            }
             steps {
                 echo 'Creating deployment package...'
                 dir("${FRONTEND_APP_PATH}") {
@@ -272,6 +289,11 @@ EOF
         }
         
         stage('Archive Artifacts') {
+            when {
+                not { 
+                    changeRequest() 
+                }
+            }
             steps {
                 echo 'Archiving build artifacts...'
                 script {
@@ -284,6 +306,11 @@ EOF
         }
         
         stage('Build Docker Image') {
+            when {
+                not { 
+                    changeRequest() 
+                }
+            }
             steps {
                 echo 'Building Docker image...'
                 dir("${FRONTEND_APP_PATH}") {
@@ -318,6 +345,11 @@ EOF
         }
         
         stage('Setup Kind and Tools') {
+            when {
+                not { 
+                    changeRequest() 
+                }
+            }
             steps {
                 echo 'Setting up Kind cluster and deployment tools...'
                 sh '''
@@ -399,6 +431,11 @@ EOF
         }
         
         stage('Deploy to Kind Cluster') {
+            when {
+                not { 
+                    changeRequest() 
+                }
+            }
             steps {
                 echo 'Deploying to Kind cluster...'
                 dir("${FRONTEND_APP_PATH}") {
@@ -437,6 +474,11 @@ EOF
         }
         
         stage('Deploy with Helm') {
+             when {
+                     not { 
+                        changeRequest() 
+                    }
+                }
             steps {
                 echo 'Deploying application using Helm...'
                 dir("${HELM_CHART_PATH}") {
@@ -536,6 +578,11 @@ EOF
         }
         
         stage('Verify Deployment') {
+             when {
+                     not { 
+                        changeRequest() 
+                    }
+                }
             steps {
                 echo 'Verifying deployment...'
                 sh '''
@@ -578,6 +625,20 @@ EOF
     post {
         always {
             script {
+                // Set GitHub commit status
+                if (env.CHANGE_ID) {
+                    // For Pull Requests
+                    step([$class: 'GitHubCommitStatusSetter',
+                        credentialsId: env.GITHUB_CREDENTIALS_ID,
+                        contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'ci/jenkins'],
+                        statusResultSource: [$class: 'ConditionalStatusResultSource',
+                            results: [
+                                [$class: 'AnyBuildResult', message: 'Jenkins build completed', state: currentBuild.currentResult]
+                            ]
+                        ]
+                    ])
+                }
+                
                 try {
                     echo 'Cleaning up temporary files...'
                     sh '''
@@ -606,6 +667,13 @@ EOF
         success {
             echo 'Pipeline completed successfully!'
             script {
+                if (env.CHANGE_ID) {
+                    githubNotify context: 'ci/jenkins', 
+                               description: 'Build succeeded', 
+                               status: 'SUCCESS',
+                               credentialsId: env.GITHUB_CREDENTIALS_ID
+                }
+                
                 echo """
                 ✅ DEPLOYMENT SUCCESSFUL - Build ${BUILD_NUMBER}
                 
@@ -613,7 +681,7 @@ EOF
                 📦 Docker image saved and loaded into Kind cluster
                 ⚓ Helm release: vinabot-rides-frontend deployed
                 🌐 Application URL: http://localhost:8082
-                � Artifacts archived in Jenkins
+                📁 Artifacts archived in Jenkins
                 
                 🚀 Full automated deployment completed!
                 Your application is now running in the Kind cluster.
@@ -624,6 +692,13 @@ EOF
         failure {
             echo 'Build failed!'
             script {
+                if (env.CHANGE_ID) {
+                    githubNotify context: 'ci/jenkins', 
+                               description: 'Build failed', 
+                               status: 'FAILURE',
+                               credentialsId: env.GITHUB_CREDENTIALS_ID
+                }
+                
                 echo """
                 ❌ BUILD FAILED - Build ${BUILD_NUMBER}
                 Check the console output for error details.
