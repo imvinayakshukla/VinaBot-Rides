@@ -14,7 +14,6 @@ pipeline {
     triggers {
         // Trigger build on PR and dev branch pushes
         githubPush()
-        githubPullRequests()
 
     }
     
