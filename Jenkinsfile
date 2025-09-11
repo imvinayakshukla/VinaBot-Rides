@@ -14,10 +14,7 @@ pipeline {
     triggers {
         // Trigger build on PR and dev branch pushes
         githubPush()
-         githubPullRequests {
-        
-            targetBranches('dev')         // 👈 only trigger PRs targeting dev
-    }
+        githubPullRequest(targetBranch: 'dev')
 
     }
     
