@@ -1,9 +1,11 @@
 # IDE and Editor files
 .vscode/
 #Cache folder
+
 .alcache/
 #Symbols folder
 .alpackages/
+
 #Snapshots folder
 .snapshots/
 #Testing Output folder
