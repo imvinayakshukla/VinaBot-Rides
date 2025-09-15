@@ -208,7 +208,7 @@ pipeline {
                 }
             }
         }
-        
+        /*
         stage('Create Deployment Package') {
             when {
                 not { 
@@ -531,10 +531,11 @@ EOF
                         
                         # Verify cluster is accessible
                         kubectl get nodes
-                        
+                        */
                         # Update image repository and tag in values.yaml (properly expand environment variables)
-                        sed -i "s/repository:.*/repository: \"${DOCKER_IMAGE_NAME}\"/" frontend/values.yaml
-                        sed -i "s/tag:.*/tag: \"${DOCKER_IMAGE_TAG}\"/" frontend/values.yaml
+        /*
+                        sed -i "s/repository:.*//*repository: \"${DOCKER_IMAGE_NAME}\"/" frontend/values.yaml
+                        sed -i "s/tag:.*/ /*tag: \"${DOCKER_IMAGE_TAG}\"/" frontend/values.yaml
                         
                         # Show current Helm releases
                         echo "=== Current Helm releases ==="
@@ -621,7 +622,7 @@ EOF
             }
         }
     }
-    
+    */
     post {
         always {
             script {
@@ -640,7 +641,7 @@ EOF
                 }
                 
                 try {
-                    echo 'Cleaning up temporary files...'
+                   /* echo 'Cleaning up temporary files...'
                     sh '''
                         # Clean up temporary files
                         rm -f ${FRONTEND_APP_PATH}/vinabot-rides-build-*.tar.gz || true
@@ -663,6 +664,7 @@ EOF
                 }
             }
         }
+        */
         
         success {
             echo 'Pipeline completed successfully!'
